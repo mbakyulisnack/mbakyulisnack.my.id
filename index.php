@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daftar Jajan Mbak Yuli Snack</title>
+    <link rel="stylesheet" href="landing_style.css?v=<?php echo filemtime('landing_style.css'); ?>">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    
+    <meta property="og:title" content="Daftar Jajan Mbak Yuli Snack">
+    <meta property="og:description" content="Temukan berbagai macam jajan enak dan murah dari Mbak Yuli Snack!">
+    <meta property="og:image" content="https://raw.githubusercontent.com/mbakyulisnack/menu/refs/heads/main/metabg.png">
+    <meta property="og:url" content="https://jajanmurah.barkaspekalongan.com">
+    <meta property="og:type" content="website">
+
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Daftar Jajan Mbak Yuli Snack">
+    <meta name="twitter:description" content="Temukan berbagai macam jajan enak dan murah dari Mbak Yuli Snack!">
+    <meta name="twitter:image" content="https://raw.githubusercontent.com/mbakyulisnack/menu/refs/heads/main/metabg.png">
+
+</head>
+<body>
+    <div id="loading-spinner" class="spinner"></div>
+
+    <div id="catalog-page" class="page active">
+        <header>
+            <h1>Daftar Jajan</h1>
+            <div class="header-right">
+                <input type="search" id="product-search" placeholder="Cari Jajan...">
+                <div class="cart-icon-container">
+                    <i class="fas fa-shopping-cart" id="cart-icon"></i>
+                    <span class="cart-badge" id="cart-badge">0</span>
+                </div>
+            </div>
+        </header>
+
+        <main id="product-list-container">
+            <p class="text-center">Memuat daftar jajan...</p>
+        </main>
+    </div>
+
+    <div id="cart-page" class="page">
+        <header>
+            <i class="fas fa-arrow-left back-button" id="back-to-catalog"></i>
+            <h1>Keranjang</h1>
+        </header>
+
+        <main>
+            <div class="form-section">
+                <h3>Detail Pemesanan</h3>
+                <label for="order-date">Tanggal Pemesanan:</label>
+                <input type="date" id="order-date" required>
+
+                <label for="order-time">Jam Pemesanan:</label>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <input type="time" id="order-time" required style="flex-grow: 1;">
+                    <span id="order-time-period" style="font-weight: bold; min-width: 80px;"></span>
+                </div>
+
+                <label for="customer-name">Nama Pemesan:</label>
+                <input type="text" id="customer-name" placeholder="Nama Lengkap Anda" required>
+
+                <label for="customer-whatsapp">Nomor WhatsApp Pemesan:</label>
+                <div class="whatsapp-input-group">
+                    <select id="country-code" class="select2-style" style="width: 120px;"></select>
+                    <input type="number" id="customer-whatsapp" placeholder="812xxxx" required inputmode="numeric" pattern="[0-9]*">
+                </div>
+            </div>
+
+            <div class="cart-items-section">
+                <h3>Daftar Jajan di Keranjang</h3>
+                <div id="cart-items-list">
+                    <p class="text-center">Keranjang Anda kosong.</p>
+                </div>
+                <div class="cart-summary">
+                    <p>Total Harga: <span id="cart-total-price">Rp 0</span></p>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <h3>Pilih Cabang</h3>
+                <select id="branch-select" class="select2-style" style="width: 100%;">
+                    <option value="">Pilih Cabang</option>
+                </select>
+                <button id="send-order-button" class="primary-button mt-20" disabled>Kirim Pesanan</button>
+            </div>
+        </main>
+    </div>
+
+    <div id="product-modal" class="modal-overlay">
+        <div class="modal-content">
+            <span class="close-button">&times;</span>
+            <img id="modal-product-image" src="" alt="Product Image">
+            <h2 id="modal-product-name">Nama Produk</h2>
+            <p id="modal-product-price">Rp 0</p>
+            <div class="modal-quantity-control">
+                <button id="modal-decrease-qty-btn">-</button>
+                <input type="number" id="modal-quantity-input" value="1" min="1">
+                <button id="modal-increase-qty-btn">+</button>
+            </div>
+            <button id="modal-add-to-cart-btn" class="primary-button">Tambah ke Keranjang</button>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
+        import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-analytics.js";
+        import { getDatabase, ref, onValue, push, set } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-database.js";
+
+        // Your web app's Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyBTgY5jin7iMSpresQp0Zfs-CYJa5dXyYE",
+            authDomain: "database-mbakyulisnack.firebaseapp.com",
+            projectId: "database-mbakyulisnack",
+            storageBucket: "database-mbakyulisnack.firebasestorage.app",
+            messagingSenderId: "729238334254",
+            appId: "1:729238334254:web:e0ba59c15261bd7cde28bf",
+            measurementId: "G-067SN2DSBB"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const analytics = getAnalytics(app);
+        const database = getDatabase(app);
+
+        // Make Firebase objects globally available to landing_script.js
+        window.firebaseDatabase = database;
+        window.firebaseRef = ref;
+        window.firebaseOnValue = onValue;
+        window.firebasePush = push;
+        window.firebaseSet = set;
+    </script>
+    <script src="landing_script.js"></script>
+</body>
+</html>
