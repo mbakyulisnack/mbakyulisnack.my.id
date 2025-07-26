@@ -14,7 +14,7 @@
     <meta property="og:title" content="Daftar Jajan Mbak Yuli Snack">
     <meta property="og:description" content="Temukan berbagai macam jajan enak dan murah dari Mbak Yuli Snack!">
     <meta property="og:image" content="https://raw.githubusercontent.com/mbakyulisnack/menu/refs/heads/main/metabg.png">
-    <meta property="og:url" content="https://jajanmurah.barkaspekalongan.com">
+    <meta property="og:url" content="https://mbakyulisnack.my.id">
     <meta property="og:type" content="website">
 
     <meta name="twitter:card" content="summary_large_image">

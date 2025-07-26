@@ -82,7 +82,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // NEW: URL dasar untuk gambar produk (jika masih di hosting server Anda)
     // Sesuaikan ini jika gambar Anda dihosting di Firebase Storage, atau di CDN lain
-    const BASE_PRODUCT_IMAGE_URL = 'https://jajanmurah.barkaspekalongan.com/uploads/jajans/';
+    const BASE_PRODUCT_IMAGE_URL = 'https://mbakyulisnack.my.id/uploads/jajans/';
 
     let allProducts = [];
     let cart = []; // Array of { id, nama, harga, quantity, foto }
