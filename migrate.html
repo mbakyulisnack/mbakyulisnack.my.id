@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Migrasi Data ke Firebase</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f4f7f6;
+            color: #333;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        h1, h2 {
+            color: #4CAF50;
+            text-align: center;
+        }
+        .section {
+            margin-bottom: 25px;
+            border: 1px solid #e0e0e0;
+            padding: 20px;
+            border-radius: 6px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+        textarea {
+            width: 100%;
+            height: 150px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-family: monospace;
+            resize: vertical;
+        }
+        input[type="file"] {
+            display: block;
+            margin-top: 10px;
+        }
+        button {
+            background-color: #03A9F4;
+            color: white;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.2s ease;
+            margin-top: 15px;
+        }
+        button:hover {
+            background-color: #0288d1;
+        }
+        button.secondary-button { /* Gaya untuk tombol download */
+            background-color: #6c757d;
+            margin-left: 10px;
+        }
+        button.secondary-button:hover {
+            background-color: #5a6268;
+        }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        .info-box {
+            background-color: #e0f7fa;
+            border-left: 5px solid #00BCD4;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+        .info-box p {
+            margin: 0;
+            color: #006064;
+        }
+        #loading-spinner {
+            display: none;
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            border-left-color: #4CAF50;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Alat Migrasi Data ke Firebase</h1>
+        <p class="info-box">
+            <i class="fas fa-info-circle"></i> Gunakan alat ini untuk mengimpor data produk (jajans) dan cabang (branches) ke Firebase Realtime Database Anda.
+            Pastikan Anda telah mengaktifkan Realtime Database dan mengatur aturan keamanan yang tepat (misalnya, `.write: true` untuk path yang dituju) di Firebase Console sebelum menggunakan alat ini.
+        </p>
+        <div class="info-box">
+            <p><i class="fas fa-exclamation-triangle"></i> **PERINGATAN KRITIS:** Skrip ini menulis data ke Firebase! Pastikan Anda tahu apa yang Anda lakukan. Data yang sudah ada di path yang sama **akan ditimpa** jika Anda mengimpor data dengan kunci ID yang sama.</p>
+        </div>
+
+        <div class="section">
+            <h2>Konfigurasi Firebase Anda</h2>
+            <p>Salin konfigurasi Firebase Anda dari Firebase Console.</p>
+            <label for="firebase-config-textarea">firebaseConfig JSON:</label>
+            <textarea id="firebase-config-textarea" placeholder="{
+                &quot;apiKey&quot;: &quot;YOUR_API_KEY&quot;,
+                &quot;authDomain&quot;: &quot;YOUR_PROJECT.firebaseapp.com&quot;,
+                &quot;projectId&quot;: &quot;YOUR_PROJECT_ID&quot;,
+                &quot;storageBucket&quot;: &quot;YOUR_PROJECT.appspot.com&quot;,
+                &quot;messagingSenderId&quot;: &quot;YOUR_SENDER_ID&quot;,
+                &quot;appId&quot;: &quot;YOUR_APP_ID&quot;,
+                &quot;measurementId&quot;: &quot;YOUR_MEASUREMENT_ID&quot;
+            }">
+            </textarea>
+            <button id="initialize-firebase-btn">Inisialisasi Firebase</button>
+            <p id="firebase-status" style="margin-top: 10px; font-weight: bold;"></p>
+        </div>
+
+        <div class="section">
+            <h2>Data Jajans</h2>
+            <label for="jajans-json-textarea">Tempel JSON Data Jajans di sini:</label>
+            <textarea id="jajans-json-textarea" placeholder="{
+                &quot;1&quot;: {
+                    &quot;nama_katalog&quot;: &quot;Jajan A&quot;,
+                    &quot;harga_katalog&quot;: 5000,
+                    &quot;foto_katalog&quot;: &quot;jajan_a.jpg&quot;
+                },
+                &quot;2&quot;: {
+                    &quot;nama_katalog&quot;: &quot;Jajan B&quot;,
+                    &quot;harga_katalog&quot;: 7500,
+                    &quot;foto_katalog&quot;: &quot;jajan_b.jpg&quot;
+                }
+            }"></textarea>
+            <label for="jajans-file-input">Atau unggah file JSON:</label>
+            <input type="file" id="jajans-file-input" accept=".json">
+            <button id="import-jajans-btn" disabled>Impor Jajans ke Firebase (/jajans)</button>
+            <button id="download-jajans-btn" class="secondary-button" disabled>Download JSON Jajans</button>
+        </div>
+
+        <div class="section">
+            <h2>Data Branches</h2>
+            <label for="branches-json-textarea">Tempel JSON Data Branches di sini:</label>
+            <textarea id="branches-json-textarea" placeholder="{
+                &quot;1&quot;: {
+                    &quot;cabang&quot;: &quot;Pekalongan&quot;,
+                    &quot;nama_lengkap&quot;: &quot;Mbak Yuli&quot;,
+                    &quot;whatsapp&quot;: &quot;6281234567890&quot;
+                },
+                &quot;2&quot;: {
+                    &quot;cabang&quot;: &quot;Batang&quot;,
+                    &quot;nama_lengkap&quot;: &quot;Mas Budi&quot;,
+                    &quot;whatsapp&quot;: &quot;6281209876543&quot;
+                }
+            }"></textarea>
+            <label for="branches-file-input">Atau unggah file JSON:</label>
+            <input type="file" id="branches-file-input" accept=".json">
+            <button id="import-branches-btn" disabled>Impor Branches ke Firebase (/branches)</button>
+            <button id="download-branches-btn" class="secondary-button" disabled>Download JSON Branches</button>
+        </div>
+
+        <div id="loading-spinner"></div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
+        import { getDatabase, ref, set } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-database.js";
+
+        let app;
+        let database;
+
+        const firebaseConfigTextarea = document.getElementById('firebase-config-textarea');
+        const initializeFirebaseBtn = document.getElementById('initialize-firebase-btn');
+        const firebaseStatus = document.getElementById('firebase-status');
+        const importJajansBtn = document.getElementById('import-jajans-btn');
+        const importBranchesBtn = document.getElementById('import-branches-btn');
+        const downloadJajansBtn = document.getElementById('download-jajans-btn'); // NEW
+        const downloadBranchesBtn = document.getElementById('download-branches-btn'); // NEW
+        const jajansJsonTextarea = document.getElementById('jajans-json-textarea');
+        const branchesJsonTextarea = document.getElementById('branches-json-textarea');
+        const jajansFileInput = document.getElementById('jajans-file-input');
+        const branchesFileInput = document.getElementById('branches-file-input');
+        const loadingSpinner = document.getElementById('loading-spinner');
+
+        const showSpinner = () => { loadingSpinner.style.display = 'block'; };
+        const hideSpinner = () => { loadingSpinner.style.display = 'none'; };
+
+        const showToast = (message, type = 'success') => {
+            Swal.fire({
+                toast: true,
+                position: 'bottom-end',
+                showConfirmButton: false,
+                timer: 3000,
+                timerProgressBar: true,
+                icon: type,
+                title: message,
+                didOpen: (toast) => {
+                    toast.addEventListener('mouseenter', Swal.stopTimer);
+                    toast.addEventListener('mouseleave', Swal.resumeTimer);
+                }
+            });
+        };
+
+        // NEW: Fungsi untuk mengunduh JSON
+        function downloadJson(filename, jsonContent) {
+            if (!jsonContent) {
+                showToast('Tidak ada konten JSON untuk diunduh.', 'error');
+                return;
+            }
+            try {
+                const blob = new Blob([JSON.stringify(JSON.parse(jsonContent), null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                showToast(`File ${filename} berhasil diunduh!`, 'success');
+            } catch (error) {
+                showToast('Gagal mengunduh file JSON: ' + error.message, 'error');
+                console.error('Download JSON error:', error);
+            }
+        }
+
+        initializeFirebaseBtn.addEventListener('click', () => {
+            try {
+                const config = JSON.parse(firebaseConfigTextarea.value);
+                app = initializeApp(config);
+                database = getDatabase(app);
+                firebaseStatus.textContent = 'Firebase berhasil diinisialisasi!';
+                firebaseStatus.style.color = 'green';
+                importJajansBtn.disabled = false;
+                importBranchesBtn.disabled = false;
+                downloadJajansBtn.disabled = false; // Enable download button
+                downloadBranchesBtn.disabled = false; // Enable download button
+                showToast('Firebase siap!', 'success');
+            } catch (error) {
+                firebaseStatus.textContent = 'Gagal inisialisasi Firebase: ' + error.message;
+                firebaseStatus.style.color = 'red';
+                showToast('Gagal inisialisasi Firebase.', 'error');
+                console.error("Firebase initialization error:", error);
+            }
+        });
+
+        async function importData(path, jsonData) {
+            if (!database) {
+                showToast('Firebase belum diinisialisasi.', 'error');
+                return;
+            }
+            if (!jsonData) {
+                showToast('Data JSON kosong.', 'error');
+                return;
+            }
+
+            showSpinner();
+            try {
+                const dbRef = ref(database, path);
+                await set(dbRef, jsonData);
+                showToast(`Data ke /${path} berhasil diimpor!`, 'success');
+                console.log(`Data to /${path} successfully imported.`);
+            } catch (error) {
+                showToast(`Gagal mengimpor data ke /${path}: ${error.message}`, 'error');
+                console.error(`Error importing data to /${path}:`, error);
+            } finally {
+                hideSpinner();
+            }
+        }
+
+        async function handleFileUpload(fileInput, textarea) {
+            const file = fileInput.files[0];
+            if (!file) {
+                showToast('Tidak ada file yang dipilih.', 'error');
+                return null;
+            }
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const json = JSON.parse(e.target.result);
+                        textarea.value = JSON.stringify(json, null, 2); // Prettify JSON in textarea
+                        resolve(json);
+                    } catch (error) {
+                        showToast('Gagal membaca file JSON: ' + error.message, 'error');
+                        reject(error);
+                    }
+                };
+                reader.readAsText(file);
+            });
+        }
+
+        jajansFileInput.addEventListener('change', async () => {
+            await handleFileUpload(jajansFileInput, jajansJsonTextarea);
+        });
+
+        branchesFileInput.addEventListener('change', async () => {
+            await handleFileUpload(branchesFileInput, branchesJsonTextarea);
+        });
+
+        importJajansBtn.addEventListener('click', () => {
+            try {
+                const jsonData = JSON.parse(jajansJsonTextarea.value);
+                importData('jajans', jsonData);
+            } catch (error) {
+                showToast('Format JSON Jajans tidak valid: ' + error.message, 'error');
+                console.error("Invalid Jajans JSON:", error);
+            }
+        });
+
+        downloadJajansBtn.addEventListener('click', () => { // NEW Event Listener
+            downloadJson('jajans_data.json', jajansJsonTextarea.value);
+        });
+
+        importBranchesBtn.addEventListener('click', () => {
+            try {
+                const jsonData = JSON.parse(branchesJsonTextarea.value);
+                importData('branches', jsonData);
+            } catch (error) {
+                showToast('Format JSON Branches tidak valid: ' + error.message, 'error');
+                console.error("Invalid Branches JSON:", error);
+            }
+        });
+
+        downloadBranchesBtn.addEventListener('click', () => { // NEW Event Listener
+            downloadJson('branches_data.json', branchesJsonTextarea.value);
+        });
+    </script>
+</body>
+</html>
